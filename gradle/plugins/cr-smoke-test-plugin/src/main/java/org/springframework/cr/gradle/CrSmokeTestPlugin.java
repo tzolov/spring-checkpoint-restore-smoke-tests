@@ -199,7 +199,10 @@ public class CrSmokeTestPlugin implements Plugin<Project> {
 				String name = serviceName.toUpperCase(Locale.ENGLISH);
 				environment.put(name + "_HOST", service.getHost());
 				service.getTcpPorts()
-						.forEach((source, target) -> environment.put(name + "_PORT_" + source, Integer.toString(target)));
+						.forEach((source, target) -> {
+							System.out.println("%%%%%%%%%%%%%%%%%: " + name + "_PORT_" + source + ":" + Integer.toString(target));
+							environment.put(name + "_PORT_" + source, Integer.toString(target));
+						});
 			});
 			return environment;
 		});
