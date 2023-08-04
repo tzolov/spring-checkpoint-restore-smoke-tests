@@ -16,6 +16,11 @@
 
 package org.springframework.cr.listener;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.crac.CheckpointException;
@@ -27,9 +32,8 @@ import org.springframework.context.ApplicationContextException;
 import org.springframework.context.ApplicationListener;
 
 /**
- * {@link ApplicationListener} trigger a checkpoint when the application is fully started
- * when the {@code org.springframework.cr.smoketest.checkpoint} JVM system property is set
- * to {@code onApplicationReady}.
+ * {@link ApplicationListener} trigger a checkpoint when the application is fully started when the
+ * {@code org.springframework.cr.smoketest.checkpoint} JVM system property is set to {@code onApplicationReady}.
  */
 class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 
@@ -41,8 +45,12 @@ class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 
 	@Override
 	public void onApplicationEvent(ApplicationReadyEvent event) {
+
+		System.out.println("TEST TEST TEST");
+
 		String property = System.getProperty(CHECKPOINT_PROPERTY_NAME);
 		if (CHECKPOINT_ON_REFRESH_VALUE.equalsIgnoreCase(property)) {
+			log("Run checkpointRestore on ApplicationReadyEvent");
 			new CracDelegate().checkpointRestore();
 		}
 	}
@@ -55,16 +63,36 @@ class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 				Core.checkpointRestore();
 			}
 			catch (UnsupportedOperationException ex) {
+				log(ex);
 				throw new ApplicationContextException("CRaC checkpoint not supported on current JVM", ex);
 			}
 			catch (CheckpointException ex) {
+				log(ex);
 				throw new ApplicationContextException("Failed to take CRaC checkpoint on refresh", ex);
 			}
 			catch (RestoreException ex) {
+				log(ex);
 				throw new ApplicationContextException("Failed to restore CRaC checkpoint on refresh", ex);
 			}
 		}
 
+	}
+
+	private static void log(Throwable ex) {
+		StringWriter sw = new StringWriter();
+		ex.printStackTrace(new PrintWriter(sw));
+		log(sw.toString());
+	}
+
+	private static void log(String message) {
+		try {
+			PrintWriter printWriter = new PrintWriter(new FileWriter("/tmp/tzolov.txt", true));
+			printWriter.println(message);
+			printWriter.close();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }
