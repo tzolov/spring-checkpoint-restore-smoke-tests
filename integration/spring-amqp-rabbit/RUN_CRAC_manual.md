@@ -8,6 +8,8 @@ build the spring-kafka project and run:
 
 ```
 docker build -t tzolov/spring-amqp-rabbit-crac-image:builder .
+
+docker build -f integration/spring-amqp-rabbit/Dockerfile -t tzolov/spring-amqp-rabbit-crac-image:builder integration/spring-amqp-rabbit/
 ```
 
 Run Kafka:

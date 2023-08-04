@@ -1,3 +1,18 @@
+/*
+ * Copyright 2023 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.example.amqp;
 
 import java.util.concurrent.TimeUnit;
@@ -13,6 +28,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.handler.annotation.SendTo;
 
 @SpringBootApplication
@@ -20,13 +36,15 @@ public class AmqpRabbitApplication {
 
 	public static void main(String[] args) throws Exception {
 		SpringApplication.run(AmqpRabbitApplication.class, args).close();
-		// Thread.currentThread().join(); // To be able to measure memory consumption
 	}
 
 	@Autowired
-	CachingConnectionFactory ccf;
+	RabbitTemplate template;
 
-	@RabbitListener(id = "crac1", queues = "crac1")
+	@Autowired
+	RabbitTemplate confirmTemplate;
+
+	@RabbitListener(id = "cr1", queues = "cr1")
 	@SendTo
 	public String upperCaseIt(String in) {
 		try {
@@ -38,38 +56,51 @@ public class AmqpRabbitApplication {
 		}
 	}
 
-	@RabbitListener(id = "crac2", queues = "crac2")
+	@RabbitListener(id = "cr2", queues = "cr2")
 	@SendTo
 	public String lowerCaseIt(String in) {
 		return in.toLowerCase();
 	}
 
 	private String sendWithConfirms() throws Exception {
-		CachingConnectionFactory ccf = new CachingConnectionFactory(this.ccf.getRabbitConnectionFactory());
-		ccf.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
-		RabbitTemplate template = new RabbitTemplate(ccf);
 		CorrelationData data = new CorrelationData();
-		String result = (String) template.convertSendAndReceive("", "crac2", "TWO", data);
+		String result = (String) this.confirmTemplate.convertSendAndReceive("", "cr2", "TWO", data);
 		data.getFuture().get(10, TimeUnit.SECONDS);
-		ccf.resetConnection();
 		return result;
 	}
 
 	@Bean
 	public Queue queue1() {
-		return new Queue("crac1");
+		return new Queue("cr1");
 	}
 
 	@Bean
 	public Queue queue2() {
-		return new Queue("crac2");
+		return new Queue("cr2");
 	}
 
 	@Bean
 	public ApplicationRunner runner(RabbitTemplate template) {
 		return args -> {
-			System.out.println("++++++ Received: " + template.convertSendAndReceive("", "crac1", "one"));
+			System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cr1", "one"));
 		};
+	}
+
+}
+
+@Configuration
+class Templates {
+
+	@Bean
+	RabbitTemplate template(CachingConnectionFactory ccf) {
+		return new RabbitTemplate(ccf);
+	}
+
+	@Bean
+	RabbitTemplate confirmTemplate(CachingConnectionFactory ccf) {
+		CachingConnectionFactory confirmCF = new CachingConnectionFactory(ccf.getRabbitConnectionFactory());
+		confirmCF.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
+		return new RabbitTemplate(confirmCF);
 	}
 
 }
