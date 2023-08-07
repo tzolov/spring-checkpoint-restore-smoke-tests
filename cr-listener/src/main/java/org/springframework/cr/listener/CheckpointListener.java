@@ -45,12 +45,11 @@ class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 
 	@Override
 	public void onApplicationEvent(ApplicationReadyEvent event) {
-
-		System.out.println("TEST TEST TEST");
-
+		System.out.println("TEST678");
+		// log("CheckpointListener#onApplicationEvent()");
 		String property = System.getProperty(CHECKPOINT_PROPERTY_NAME);
 		if (CHECKPOINT_ON_REFRESH_VALUE.equalsIgnoreCase(property)) {
-			log("Run checkpointRestore on ApplicationReadyEvent");
+			// log("Run checkpointRestore on ApplicationReadyEvent");
 			new CracDelegate().checkpointRestore();
 		}
 	}
@@ -63,20 +62,22 @@ class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 				Core.checkpointRestore();
 			}
 			catch (UnsupportedOperationException ex) {
-				log(ex);
+				// log(ex);
 				throw new ApplicationContextException("CRaC checkpoint not supported on current JVM", ex);
 			}
 			catch (CheckpointException ex) {
-				log(ex);
+				// log(ex);
 				throw new ApplicationContextException("Failed to take CRaC checkpoint on refresh", ex);
 			}
 			catch (RestoreException ex) {
-				log(ex);
+				// log(ex);
 				throw new ApplicationContextException("Failed to restore CRaC checkpoint on refresh", ex);
 			}
 		}
 
 	}
+
+	private static String LOG_PATH = "/tmp/tzolov.txt";
 
 	private static void log(Throwable ex) {
 		StringWriter sw = new StringWriter();
@@ -86,7 +87,7 @@ class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 
 	private static void log(String message) {
 		try {
-			PrintWriter printWriter = new PrintWriter(new FileWriter("/tmp/tzolov.txt", true));
+			PrintWriter printWriter = new PrintWriter(new FileWriter(LOG_PATH, true));
 			printWriter.println(message);
 			printWriter.close();
 		}

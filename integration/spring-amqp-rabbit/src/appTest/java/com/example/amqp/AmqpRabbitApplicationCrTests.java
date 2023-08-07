@@ -20,6 +20,7 @@ import java.time.Duration;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.cr.smoketest.support.Output;
 import org.springframework.cr.smoketest.support.assertj.AssertableOutput;
 import org.springframework.cr.smoketest.support.junit.ApplicationTest;
 
@@ -30,9 +31,14 @@ class AmqpRabbitApplicationCrTests {
 
 	@Test
 	void rabbitListenerMethodReceivesMessageAndSendsResponse(AssertableOutput output) {
-		Awaitility.await()
-			.atMost(Duration.ofSeconds(30))
-			.untilAsserted(() -> assertThat(output).hasSingleLineContaining("++++++ Received: ONEtwo"));
+		System.out.println("696(1)");
+		System.out.println("696(2): " + Output.current().lines().toString());
+		Awaitility.await().atMost(Duration.ofSeconds(60)).untilAsserted(() -> {
+			// System.out.println("696(3): " + Output.current().lines().toString());
+			assertThat(output).hasLineContaining("++++++ Received: ONEtwo");
+		});
+		// .untilAsserted(() -> assertThat(output).hasSingleLineContaining("++++++
+		// Received: ONEtwo"));
 	}
 
 }

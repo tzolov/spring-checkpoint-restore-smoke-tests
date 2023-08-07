@@ -20,32 +20,28 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.handler.annotation.SendTo;
 
 @SpringBootApplication
-public class AmqpRabbitApplication {
+public class AmqpRabbitApplication implements ApplicationListener<ApplicationReadyEvent> {
 
 	public static void main(String[] args) throws Exception {
-		SpringApplication.run(AmqpRabbitApplication.class, args).close();
+		SpringApplication.run(AmqpRabbitApplication.class, args);
 	}
 
 	@Autowired
 	RabbitTemplate template;
 
-	@Autowired
-	RabbitTemplate confirmTemplate;
-
-	@RabbitListener(id = "cr1", queues = "cr1")
+	@RabbitListener(id = "cf1", queues = "cf1")
 	@SendTo
 	public String upperCaseIt(String in) {
 		try {
@@ -57,7 +53,7 @@ public class AmqpRabbitApplication {
 		}
 	}
 
-	@RabbitListener(id = "cr2", queues = "cr2")
+	@RabbitListener(id = "cf2", queues = "cf2")
 	@SendTo
 	public String lowerCaseIt(String in) {
 		return in.toLowerCase();
@@ -65,43 +61,35 @@ public class AmqpRabbitApplication {
 
 	private String sendWithConfirms() throws Exception {
 		CorrelationData data = new CorrelationData();
-		String result = (String) this.confirmTemplate.convertSendAndReceive("", "cr2", "TWO", data);
+		String result = (String) this.template.convertSendAndReceive("", "cf2", "TWO", data);
 		data.getFuture().get(10, TimeUnit.SECONDS);
 		return result;
 	}
 
 	@Bean
 	public Queue queue1() {
-		return new Queue("cr1");
+		return new Queue("cf1");
 	}
 
 	@Bean
 	public Queue queue2() {
-		return new Queue("cr2");
+		return new Queue("cf2");
 	}
 
-	@Bean
-	public ApplicationRunner runner(@Qualifier("template") RabbitTemplate template) {
-		return args -> {
-			System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cr1", "one"));
-		};
-	}
+	// @Bean
+	// public ApplicationRunner runner(RabbitTemplate template) {
+	// 	return args -> {
+	// 		while (true) {
+	// 			System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1",
+	// 					"one"));
+	// 			Thread.sleep(100);
+	// 		}
+	// 	};
+	// }
 
-}
-
-@Configuration
-class Templates {
-
-	@Bean
-	RabbitTemplate template(CachingConnectionFactory ccf) {
-		return new RabbitTemplate(ccf);
-	}
-
-	@Bean("confirmTemplate")
-	RabbitTemplate confirmTemplate(CachingConnectionFactory ccf) {
-		CachingConnectionFactory confirmCF = new CachingConnectionFactory(ccf.getRabbitConnectionFactory());
-		confirmCF.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
-		return new RabbitTemplate(confirmCF);
+	@Override
+	public void onApplicationEvent(ApplicationReadyEvent event) {
+		System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1", "one"));
 	}
 
 }
