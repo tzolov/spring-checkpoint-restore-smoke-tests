@@ -76,20 +76,20 @@ public class AmqpRabbitApplication implements ApplicationListener<ApplicationRea
 		return new Queue("cf2");
 	}
 
-	// @Bean
-	// public ApplicationRunner runner(RabbitTemplate template) {
-	// 	return args -> {
-	// 		while (true) {
-	// 			System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1",
-	// 					"one"));
-	// 			Thread.sleep(100);
-	// 		}
-	// 	};
-	// }
+	@Bean
+	public ApplicationRunner runner(RabbitTemplate template) {
+		return args -> {
+			while (true) {
+				System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1", "one"));
+				Thread.sleep(1000);
+			}
+		};
+	}
 
 	@Override
 	public void onApplicationEvent(ApplicationReadyEvent event) {
-		System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1", "one"));
+		// System.out.println("++++++ Received: " + template.convertSendAndReceive("",
+		// "cf1", "one"));
 	}
 
 }
