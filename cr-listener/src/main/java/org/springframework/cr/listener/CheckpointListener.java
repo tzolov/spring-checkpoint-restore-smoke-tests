@@ -27,8 +27,9 @@ import org.springframework.context.ApplicationContextException;
 import org.springframework.context.ApplicationListener;
 
 /**
- * {@link ApplicationListener} trigger a checkpoint when the application is fully started when the
- * {@code org.springframework.cr.smoketest.checkpoint} JVM system property is set to {@code onApplicationReady}.
+ * {@link ApplicationListener} trigger a checkpoint when the application is fully started
+ * when the {@code org.springframework.cr.smoketest.checkpoint} JVM system property is set
+ * to {@code onApplicationReady}.
  */
 class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 
@@ -65,4 +66,5 @@ class CheckpointListener implements ApplicationListener<ApplicationReadyEvent> {
 		}
 
 	}
+
 }
