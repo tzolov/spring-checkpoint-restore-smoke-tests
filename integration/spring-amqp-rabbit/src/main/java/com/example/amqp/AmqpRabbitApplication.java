@@ -16,6 +16,7 @@
 package com.example.amqp;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.Queue;
@@ -23,16 +24,17 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @SpringBootApplication
-public class AmqpRabbitApplication implements ApplicationListener<ApplicationReadyEvent> {
+@EnableScheduling
+public class AmqpRabbitApplication implements SmartLifecycle {
 
 	public static void main(String[] args) throws Exception {
 		SpringApplication.run(AmqpRabbitApplication.class, args);
@@ -76,20 +78,29 @@ public class AmqpRabbitApplication implements ApplicationListener<ApplicationRea
 		return new Queue("cf2");
 	}
 
-	@Bean
-	public ApplicationRunner runner(RabbitTemplate template) {
-		return args -> {
-			while (true) {
-				System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1", "one"));
-				Thread.sleep(1000);
-			}
-		};
+	@Scheduled(fixedDelay = 1, timeUnit = TimeUnit.SECONDS)
+	public void doSendMessage() {
+		if (this.isRunning.get()) {
+			System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1", "one"));
+		}
+	}
+
+	// Use the SmartLifecycle to synch the message sending with the checkpoint/restore.
+	private AtomicBoolean isRunning = new AtomicBoolean(false);
+
+	@Override
+	public void start() {
+		this.isRunning.set(true);
 	}
 
 	@Override
-	public void onApplicationEvent(ApplicationReadyEvent event) {
-		// System.out.println("++++++ Received: " + template.convertSendAndReceive("",
-		// "cf1", "one"));
+	public void stop() {
+		this.isRunning.set(false);
+	}
+
+	@Override
+	public boolean isRunning() {
+		return this.isRunning.get();
 	}
 
 }

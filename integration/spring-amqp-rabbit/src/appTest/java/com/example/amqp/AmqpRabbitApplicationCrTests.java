@@ -30,13 +30,9 @@ class AmqpRabbitApplicationCrTests {
 
 	@Test
 	void rabbitListenerMethodReceivesMessageAndSendsResponse(AssertableOutput output) {
-		System.out.println("696(1)");
-		Awaitility.await().atMost(Duration.ofSeconds(60)).untilAsserted(() -> {
-			// System.out.println("696(3): " + Output.current().lines().toString());
-			assertThat(output).hasLineContaining("++++++ Received: ONEtwo");
-		});
-		// .untilAsserted(() -> assertThat(output).hasSingleLineContaining("++++++
-		// Received: ONEtwo"));
+		Awaitility.await()
+			.atMost(Duration.ofSeconds(60))
+			.untilAsserted(() -> assertThat(output).hasLineContaining("++++++ Received: ONEtwo"));
 	}
 
 }
