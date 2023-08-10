@@ -15,6 +15,9 @@
  */
 package com.example.amqp;
 
+import java.time.Duration;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,8 +32,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 
 @SpringBootApplication
 @EnableScheduling
@@ -78,24 +81,43 @@ public class AmqpRabbitApplication implements SmartLifecycle {
 		return new Queue("cf2");
 	}
 
-	@Scheduled(fixedDelay = 1, timeUnit = TimeUnit.SECONDS)
-	public void doSendMessage() {
-		if (this.isRunning.get()) {
-			System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1", "one"));
-		}
-	}
-
-	// Use the SmartLifecycle to synch the message sending with the checkpoint/restore.
 	private AtomicBoolean isRunning = new AtomicBoolean(false);
 
+	@Autowired
+	private TaskScheduler scheduler;
+
+	private ScheduledFuture<?> scheduledFuture = null;
+
+	private Semaphore taskCompletionSemaphore = new Semaphore(1);
+
+	// Use the SmartLifecycle to align the message sending with the checkpoint/restore
+	// steps.
 	@Override
 	public void start() {
 		this.isRunning.set(true);
+
+		this.scheduledFuture = this.scheduler.scheduleWithFixedDelay(() -> {
+			this.taskCompletionSemaphore.acquireUninterruptibly();
+
+			// Business logic
+			if (this.isRunning.get()) {
+				System.out.println("++++++ Received: " + template.convertSendAndReceive("", "cf1", "one"));
+			}
+
+			this.taskCompletionSemaphore.release();
+		}, Duration.ofSeconds(1));
 	}
 
 	@Override
 	public void stop() {
 		this.isRunning.set(false);
+		if (this.scheduledFuture != null) {
+			this.scheduledFuture.cancel(false);
+
+			// blocks this thread until the task is compleat.
+			this.taskCompletionSemaphore.acquireUninterruptibly();
+			this.taskCompletionSemaphore.release();
+		}
 	}
 
 	@Override
